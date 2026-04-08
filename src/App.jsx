@@ -74,6 +74,16 @@ function App() {
   const scrollRef = useRef(null);
   const [targetScroll, setTargetScroll] = useState(0);
   const scrollAnimRef = useRef(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    const checkTouch = () => {
+      setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches || 'ontouchstart' in window);
+    };
+    checkTouch();
+    window.addEventListener('resize', checkTouch);
+    return () => window.removeEventListener('resize', checkTouch);
+  }, []);
 
   // Smooth Inertia Scroll Logic
   useEffect(() => {
@@ -95,7 +105,7 @@ function App() {
   // Request Animation Frame for smooth lerp scroll
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || selectedId) return;
+    if (!el || selectedId || isTouchDevice) return; // Disable loop to allow native momentum swipe on phones
 
     const smoothScroll = () => {
       el.scrollLeft += (targetScroll - el.scrollLeft) * 0.08;
@@ -104,7 +114,7 @@ function App() {
     
     scrollAnimRef.current = requestAnimationFrame(smoothScroll);
     return () => cancelAnimationFrame(scrollAnimRef.current);
-  }, [targetScroll, selectedId]);
+  }, [targetScroll, selectedId, isTouchDevice]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -157,16 +167,20 @@ function App() {
       </div>
 
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 p-8 md:px-12 z-20 flex justify-between items-center pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 p-6 md:p-8 md:px-12 z-20 flex justify-between items-center pointer-events-none">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 pointer-events-auto"
+          className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 pointer-events-auto"
         >
-          <Sparkles className="w-8 h-8 text-[#d4af37] animate-pulse" />
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-[#1e3a8a] uppercase drop-shadow-sm">
-            Tryst <span className="text-[#d4af37]">2026</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 md:w-8 md:h-8 text-[#d4af37] animate-pulse" />
+            <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-[#1e3a8a] uppercase drop-shadow-sm">
+              Tryst <span className="text-[#d4af37]">2026</span>
+            </h1>
+          </div>
+          {/* Mobile only date/location */}
+          <p className="text-[10px] font-bold tracking-widest uppercase text-[#1e3a8a]/60 md:hidden ml-7">April 21-23 / Delhi</p>
         </motion.div>
         <div className="hidden md:flex gap-8 text-sm font-bold tracking-[0.2em] uppercase text-[#1e3a8a] px-6 py-3 rounded-full border border-[#1e3a8a]/10 bg-white/70 backdrop-blur-md shadow-sm">
           <span>April 21-23</span>
@@ -202,33 +216,41 @@ function App() {
       {/* Full Screen Modal - Light Mode Starry Palette */}
       <AnimatePresence>
         {selectedId && selectedData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4 md:p-8">
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-0 md:p-8">
             <motion.div 
               initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
               animate={{ opacity: 1, backdropFilter: 'blur(20px)' }}
               exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
               transition={{ duration: 0.4 }}
-              className="absolute inset-0 bg-[#fdfbf7]/80 pointer-events-auto"
+              className="absolute inset-0 bg-[#fdfbf7]/80 md:bg-[#fdfbf7]/60 pointer-events-auto"
               onClick={() => setSelectedId(null)}
             />
             
             <motion.div 
               layoutId={`card-container-${selectedData.id}`}
-              className="relative w-full max-w-6xl h-[90vh] md:h-[85vh] bg-[#fdfbf7] rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(30,58,138,0.2)] z-10 pointer-events-auto flex flex-col md:flex-row border border-[#1e3a8a]/10"
+              className="relative w-full max-w-6xl h-[100dvh] md:h-[85vh] bg-[#fdfbf7] md:rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(30,58,138,0.2)] z-10 pointer-events-auto flex flex-col md:flex-row md:border border-[#1e3a8a]/10"
             >
+              {/* Global Close Button for Modal */}
+              <button 
+                onClick={() => setSelectedId(null)}
+                className="absolute top-4 right-4 md:top-10 md:right-10 bg-white/70 backdrop-blur-md hover:bg-white p-3 md:p-4 rounded-full text-[#1e3a8a] transition-all shadow-[0_5px_15px_rgba(0,0,0,0.15)] border border-white hover:scale-110 hover:rotate-90 z-40"
+              >
+                <X className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+
               {/* Image Half */}
-              <motion.div layoutId={`card-image-${selectedData.id}`} className="w-full md:w-5/12 h-64 md:h-full relative flex-shrink-0 bg-[#f0f6ff] overflow-hidden">
+              <motion.div layoutId={`card-image-${selectedData.id}`} className="w-full md:w-5/12 h-[35vh] md:h-full relative flex-shrink-0 bg-[#f0f6ff] overflow-hidden">
                 <img src={selectedData.image} alt={selectedData.title} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#fdfbf7] via-[#fdfbf7]/80 to-transparent z-10" />
               </motion.div>
 
               {/* Content Half */}
-              <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#fdfbf7] relative z-20 rounded-t-3xl md:rounded-none overflow-y-auto hide-scroll">
-                <motion.div layoutId={`card-content-${selectedData.id}`} className="flex flex-col h-full justify-center">
-                  <motion.p layoutId={`subtitle-${selectedData.id}`} className="text-[#a18218] font-inter text-sm md:text-base font-bold tracking-[0.3em] uppercase mb-4 drop-shadow-sm">
+              <div className="w-full md:w-7/12 p-6 md:p-16 flex flex-col justify-start md:justify-center bg-[#fdfbf7] relative z-20 rounded-t-3xl md:rounded-none overflow-y-auto hide-scroll -mt-6 md:mt-0">
+                <motion.div layoutId={`card-content-${selectedData.id}`} className="flex flex-col h-full justify-center pb-8 md:pb-0">
+                  <motion.p layoutId={`subtitle-${selectedData.id}`} className="text-[#a18218] font-inter text-xs md:text-base font-bold tracking-[0.3em] uppercase mb-4 drop-shadow-sm">
                     {selectedData.subtitle}
                   </motion.p>
-                  <motion.h2 layoutId={`title-${selectedData.id}`} className="text-4xl md:text-7xl font-black text-[#1e3a8a] mb-8 leading-[1.1] tracking-tight">
+                  <motion.h2 layoutId={`title-${selectedData.id}`} className="text-3xl md:text-7xl font-black text-[#1e3a8a] mb-6 md:mb-8 leading-[1.1] tracking-tight">
                     {selectedData.title}
                   </motion.h2>
                   
@@ -236,40 +258,33 @@ function App() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
-                    className="space-y-8 flex-grow"
+                    className="space-y-6 md:space-y-8 flex-grow"
                   >
-                    <p className="text-[#1e3a8a]/80 font-inter text-lg md:text-2xl leading-relaxed font-light">
+                    <p className="text-[#1e3a8a]/80 font-inter text-base md:text-2xl leading-relaxed font-light">
                       {selectedData.description}
                     </p>
 
-                    <div className="pt-8 space-y-5 border-t border-[#1e3a8a]/10 inline-block w-full">
+                    <div className="pt-6 md:pt-8 space-y-4 md:space-y-5 border-t border-[#1e3a8a]/10 inline-block w-full">
                       {selectedData.details.map((detail, idx) => (
-                        <div key={idx} className="flex items-center gap-6 text-[#1e3a8a] group">
-                          <div className="p-4 bg-[#f0f6ff] rounded-2xl border border-[#1e3a8a]/5 shadow-sm group-hover:scale-110 group-hover:bg-[#d4af37]/10 group-hover:border-[#d4af37]/30 transition-all">
+                        <div key={idx} className="flex items-center gap-4 md:gap-6 text-[#1e3a8a] group">
+                          <div className="p-3 md:p-4 bg-[#f0f6ff] rounded-xl md:rounded-2xl border border-[#1e3a8a]/5 shadow-sm group-hover:scale-110 group-hover:bg-[#d4af37]/10 group-hover:border-[#d4af37]/30 transition-all">
                               {detail.icon}
                           </div>
-                          <span className="font-semibold text-xl tracking-wide">{detail.text}</span>
+                          <span className="font-semibold text-lg md:text-xl tracking-wide">{detail.text}</span>
                         </div>
                       ))}
                     </div>
                     
                     {/* Action Button - Primary CTA */}
-                    <div className="pt-10">
-                       <button className="relative overflow-hidden bg-[#1e3a8a] text-white font-black tracking-widest uppercase py-5 px-10 rounded-full shadow-[0_10px_30px_rgba(30,58,138,0.25)] hover:shadow-[0_20px_40px_rgba(30,58,138,0.4)] hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group w-full md:w-auto">
-                          <span className="relative z-10">Explore More</span>
-                          <ArrowRight className="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform text-[#d4af37]" />
+                    <div className="pt-8 md:pt-10">
+                       <button className="relative overflow-hidden bg-[#1e3a8a] text-white font-black tracking-widest uppercase py-4 md:py-5 px-8 md:px-10 rounded-full shadow-[0_10px_30px_rgba(30,58,138,0.25)] hover:shadow-[0_20px_40px_rgba(30,58,138,0.4)] hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group w-full md:w-auto">
+                          <span className="relative z-10 text-sm md:text-base">Explore More</span>
+                          <ArrowRight className="w-5 h-5 md:w-6 md:h-6 relative z-10 group-hover:translate-x-2 transition-transform text-[#d4af37]" />
                           <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out z-0 skew-x-12"></div>
                        </button>
                     </div>
                   </motion.div>
                 </motion.div>
-
-                <button 
-                  onClick={() => setSelectedId(null)}
-                  className="absolute top-6 right-6 md:top-10 md:right-10 bg-white hover:bg-gray-50 p-4 rounded-full text-[#1e3a8a] transition-all shadow-[0_5px_15px_rgba(0,0,0,0.08)] border border-gray-200 hover:scale-110 hover:rotate-90 z-30"
-                >
-                  <X className="w-6 h-6" />
-                </button>
               </div>
             </motion.div>
           </div>
