@@ -10,8 +10,8 @@
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: var(--color-electric-blue);
-  color: #fff;
+  background-color: #ffffff;
+  color: var(--color-electric-blue);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
